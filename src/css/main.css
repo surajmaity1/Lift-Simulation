@@ -2,13 +2,18 @@
     background-color: lightskyblue;
 }
 
-#test {
-    background-color: powderblue; 
-    height: 30px; 
-    width: 100%;
-    display: inline-flex;
+button {
+    font-weight: bold;
 }
 
+.up_button {
+    background-color: lightgreen;
+}
+
+.down_button {
+    background-color: orange;
+    margin-bottom: 12px;
+}
 .floor {
     height: 50px;
     width: 100%;
@@ -26,11 +31,11 @@
     max-height: 50px;
     border-radius: 5px;
     display: flex;
-    overflow: hidden; 
+    overflow: hidden;
 }
 
 .lift-door {
     width: 30px;
-    background-color: cadetblue;
+    background-color: #0CAFFF;
     border: 1px solid darkblue;
 }

@@ -9,3 +9,28 @@
     display: inline-flex;
 }
 
+.floor {
+    height: 50px;
+    width: 100%;
+    background-color: white;
+    display: flex;
+    margin: 8px;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.lift {
+    background-color: cadetblue;
+    height: 50px;
+    width: 60px;
+    max-height: 50px;
+    border-radius: 5px;
+    display: flex;
+    overflow: hidden; 
+}
+
+.lift-door {
+    width: 30px;
+    background-color: cadetblue;
+    border: 1px solid darkblue;
+}

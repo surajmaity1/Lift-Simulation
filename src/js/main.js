@@ -9,7 +9,7 @@ const lifts = [];
 const scheduleOperation = [];
 
 playButton.addEventListener('click', function(event) {
-    if (noOfFloors.value < 2 || noOfLifts.value < 1) {
+    if (noOfFloors.value < 1 || noOfLifts.value < 1) {
         return;
     }
 
@@ -22,13 +22,13 @@ playButton.addEventListener('click', function(event) {
 
 function createFloors(totalNoOfFloors, totalNoOfLifts) {
     const windowInnerWidth = window.innerWidth;
-    const widthForAllLifts = 50 * totalNoOfLifts;
-    const width = widthForAllLifts < windowInnerWidth ? `${windowInnerWidth - 50}px` : `${widthForAllLifts}px`;
+    const widthForAllLifts = 100 * totalNoOfLifts;
+    const width = widthForAllLifts < windowInnerWidth ? `${windowInnerWidth - 100}px` : `${widthForAllLifts}px`;
     
     for (let floor = 0; floor < totalNoOfFloors; floor++) {
         const eachFloor = document.createElement('div');
-        const lineSeparator = document.createElement('div');
         const floorName = document.createElement('p');
+        const containers = document.createElement('div');
         const upButton = document.createElement('button');
         const downButton = document.createElement('button');
         const generateId = totalNoOfFloors - floor;
@@ -37,40 +37,37 @@ function createFloors(totalNoOfFloors, totalNoOfLifts) {
         eachFloor.classList.add('floor');
         eachFloor.style.width = width;
 
-        lineSeparator.style.backgroundColor = 'black';
-        lineSeparator.style.height='4px';
-        lineSeparator.style.width='100%';
-        lineSeparator.style.borderRadius='10px';
-
-        floorName.textContent = `Floor ${generateId}`;
-        floorName.style.textAlign = 'right';
-        floorName.style.fontWeight = 'bold';
+        floorName.innerHTML = `Floor ${generateId}`;
 
         upButton.id = `up_button_${generateId}`;
         upButton.innerHTML = 'Up';
         upButton.classList.add('up_button');
-        upButton.addEventListener('click', allLiftsButtonsControler);
+        upButton.addEventListener('click', allLiftsButtonsController);
 
         downButton.id = `down_button_${generateId}`;
         downButton.innerHTML = 'Down';
         downButton.classList.add('down_button');
-        downButton.addEventListener('click', allLiftsButtonsControler);
+        downButton.addEventListener('click', allLiftsButtonsController);
 
+        // for ground floor, only up button appear
+        // for top floor, only down button appear
+        if (floor !== 0) {
+            containers.appendChild(upButton);
+        }
+        containers.appendChild(downButton);
+        containers.appendChild(floorName);
+
+        if (floor === 0) {
+            upButton.style.visibility = 'hidden';
+        }
+
+        if (floor === totalNoOfFloors - 1) {
+            downButton.style.visibility = 'hidden';
+        }
 
         floors.push(eachFloor);
-        constructFloors.appendChild(floorName);
-
-        if (floor !== 0) {
-            constructFloors.appendChild(upButton);
-            constructFloors.appendChild(document.createElement('br'));
-        }
-        if (floor !== totalNoOfFloors - 1) {
-            constructFloors.appendChild(downButton);
-        }
-
+        eachFloor.appendChild(containers);
         constructFloors.appendChild(eachFloor);
-        constructFloors.appendChild(lineSeparator);
-
     }
 }
 
@@ -90,9 +87,9 @@ function createLifts(totalNoOfLifts) {
         liftRightDoor.classList.add('lift-door');
 
         eachLift.id = `lift_${mainLiftNumber}`;
-        eachLift.classList.add('lift');
         eachLift.appendChild(liftLeftDoor);
         eachLift.appendChild(liftRightDoor);
+        eachLift.classList.add('lift');
 
         const eachLiftState = {
             liftId: mainLiftNumber,
@@ -109,19 +106,22 @@ function createLifts(totalNoOfLifts) {
 
     setInterval(() => {
         liftOperationScheduler();
-    }, 500);
+    }, 100);
 }
 
 function openDoorsOfCurrentLift(currentLiftId) {
+    const lift = lifts.find((lift) => lift.liftId === currentLiftId);
     const liftLeftDoor = document.querySelector(`#left_lift_door_${currentLiftId}`);
     const liftRightDoor = document.querySelector(`#right_lift_door_${currentLiftId}`);
 
+    lift.stateStatus = true;
     // open door
     setTimeout(() => {
         liftLeftDoor.style.transform = 'translateX(-100%)';
         liftLeftDoor.style.transition = `transform 2.5s`;
         liftRightDoor.style.transform = 'translateX(100%)';
         liftRightDoor.style.transition = `transform 2.5s`;
+        console.log('first',lift);
     }, 2500);
 
     // close door
@@ -130,20 +130,27 @@ function openDoorsOfCurrentLift(currentLiftId) {
         liftLeftDoor.style.transition = `transform 2.5s`;
         liftRightDoor.style.transform = 'translateX(0)';
         liftRightDoor.style.transition = `transform 2.5s`;
+        console.log('second',lift);
     }, 5000);
+
+    setTimeout(() => {
+        lift.stateStatus = false;
+        console.log('third', lift);
+    }, 7000);
+    // console.log('fourth', lift);
 }
 
-function allLiftsButtonsControler(event) {
+function allLiftsButtonsController(event) {
     const button = event.target.id;
     const floorNumberAt = button.split('_')[2] - 1;
-
+    console.log(floorNumberAt);
     // check any lift present at same floor from where button is clicked
     const currentLiftAt = lifts.find(
         (lift) => {
             return lift.floorNumberAt === floorNumberAt && lift.movingStatus === false
         }
     );
-
+    //console.log('currentLiftAt', currentLiftAt);
     // if lift present at current floor, simple open gate and close gate
     // don't move other lift
     if (currentLiftAt) {
@@ -158,10 +165,14 @@ function allLiftsButtonsControler(event) {
         }
     );
 
+    console.log('anyMovingLiftToFloor:');
+    console.log(anyMovingLiftToFloor);
+
     // if lift is moving, return
     if (anyMovingLiftToFloor) {
         return;
     }
+    console.log('schedule');
 
     // put operation in array
     scheduleOperation.push(floorNumberAt);
@@ -205,6 +216,11 @@ function liftOperationScheduler() {
         return;
     }
 
+    if (lift.stateStatus === true) {
+        scheduleOperation.push(getLift);
+        return;
+    }
+
     // move lift now
     liftMovement(lift.floorNumberAt, getLift, id);
 }
@@ -217,7 +233,7 @@ function liftMovement(source, destination, currentLiftId) {
     const liftLeftDoor = document.querySelector(`#left_lift_door_${currentLiftId}`);
     const liftRightDoor = document.querySelector(`#right_lift_door_${currentLiftId}`);
     const distance = -1 * destination * 160;
-    const time = Math.abs(source - destination);
+    const time = Math.abs(source - destination) * 2;
 
     setTimeout(() => {
         liftLeftDoor.style.transform = 'translateX(-100%)';

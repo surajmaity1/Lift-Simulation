@@ -4,10 +4,15 @@
 
 button {
     font-weight: bold;
+    border-radius: 6px;
 }
 
 .up_button {
     background-color: lightgreen;
+}
+
+p {
+    font-weight: bold;
 }
 
 .down_button {
@@ -15,27 +20,31 @@ button {
     margin-bottom: 12px;
 }
 .floor {
-    height: 50px;
-    width: 100%;
-    background-color: white;
+    border-bottom: 2px solid black;
+    max-height: 150px;
+    height: 150px;
     display: flex;
-    margin: 8px;
-    gap: 0.8rem;
     align-items: center;
+    gap: 1rem;
+    margin: 10px;
+    z-index: 1;
 }
 
 .lift {
     background-color: grey;
-    height: 50px;
-    width: 60px;
-    max-height: 50px;
-    border-radius: 5px;
+    height: 100px;
+    max-height: 100px;
+    width: 80px;
+    z-index: 2;
     display: flex;
+    border: 1px solid var(--white);
+    border-radius: 4px;
     overflow: hidden;
+    padding: 0;
 }
 
 .lift-door {
-    width: 30px;
+    width: 40px;
     background-color: #0CAFFF;
     border: 1px solid darkblue;
 }

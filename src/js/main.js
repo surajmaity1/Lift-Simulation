@@ -8,7 +8,7 @@ const floors = [];
 const lifts = [];
 const scheduleOperation = [];
 
-playButton.addEventListener('click', function(event) {
+playButton.addEventListener('click', function (event) {
     if (noOfFloors.value < 1 || noOfLifts.value < 1) {
         return;
     }
@@ -24,7 +24,7 @@ function createFloors(totalNoOfFloors, totalNoOfLifts) {
     const windowInnerWidth = window.innerWidth;
     const widthForAllLifts = 100 * totalNoOfLifts;
     const width = widthForAllLifts < windowInnerWidth ? `${windowInnerWidth - 100}px` : `${widthForAllLifts}px`;
-    
+
     for (let floor = 0; floor < totalNoOfFloors; floor++) {
         const eachFloor = document.createElement('div');
         const floorName = document.createElement('p');
@@ -121,7 +121,7 @@ function openDoorsOfCurrentLift(currentLiftId) {
         liftLeftDoor.style.transition = `transform 2.5s`;
         liftRightDoor.style.transform = 'translateX(100%)';
         liftRightDoor.style.transition = `transform 2.5s`;
-        console.log('openDoorsOfCurrentLift door open start',lift);
+        console.log('openDoorsOfCurrentLift door open start', lift);
     }, 2500);
 
     // close door
@@ -134,9 +134,9 @@ function openDoorsOfCurrentLift(currentLiftId) {
 
     setTimeout(() => {
         lift.stateStatus = false;
-        console.log('openDoorsOfCurrentLift door close complete',lift);
+        console.log('openDoorsOfCurrentLift door close complete', lift);
     }, 7000);
-    // console.log('fourth', lift);
+    console.log('openDoorsOfCurrentLift just started', lift);
 }
 
 function allLiftsButtonsController(event) {
@@ -164,8 +164,8 @@ function allLiftsButtonsController(event) {
         }
     );
 
-    // console.log('anyMovingLiftToFloor:');
-    // console.log(anyMovingLiftToFloor);
+    // console.log('anyMovingLiftToFloor:', anyMovingLiftToFloor);
+
     // if lift is moving, return
     if (anyMovingLiftToFloor) {
         return;
@@ -176,7 +176,7 @@ function allLiftsButtonsController(event) {
     scheduleOperation.push(floorNumberAt);
 }
 
-function getNearestLiftId (currentFloor) {
+function getNearestLiftId(currentFloor) {
 
     // finding nearest lift id
     let distance = floors.length;
@@ -206,7 +206,6 @@ function liftOperationScheduler() {
     const lift = lifts.find(
         (lift) => lift.liftId === id
     );
-    console.log('slow lift second', lift);
 
     // if there is any lift 
     if (!lift) {
@@ -214,26 +213,78 @@ function liftOperationScheduler() {
         return;
     }
 
-    // const alreadyPresentLift = lifts.find(
-    //     (eachLift) => eachLift.liftId === id 
-    // );
-    // console.log('alreadyPresentLift', lift);
+    if (lift.stateStatus === true) {
+        console.log('Already opened & wait', lift);
 
-    // if (alreadyPresentLift) {
-    //     return;
-    // }
+        // find nearest lift that is not moving & door close
+        let distance = floors.length;
+        let nearestLiftId = null;
+        const totalNoOfLifts = lifts.length;
 
-    // if (lift.stateStatus === true) {
-    //     console.log('lift.stateStatus === true');
-    //     scheduleOperation.push(floorToMove);
-    //     return;
-    // }
-    
-    // if (lift.movingStatus === true) {
-    //     console.log('lift.movingStatus === true');
-    //     scheduleOperation.push(floorToMove);
-    //     return;
-    // }
+        for (let liftIdx = 0; liftIdx < totalNoOfLifts; liftIdx++) {
+            const eachLift = lifts[liftIdx];
+
+            if (eachLift.stateStatus === false &&
+                eachLift.movingStatus === false &&
+                eachLift.whereMoving === null &&
+                Math.abs(eachLift.floorNumberAt - floorToMove) < distance
+            ) {
+                nearestLiftId = eachLift.liftId;
+                distance = Math.abs(eachLift.floorNumberAt - floorToMove);
+            }
+        }
+
+        if (!nearestLiftId) {
+            scheduleOperation.push(floorToMove);
+            return;
+        }
+
+        const liftFound = lifts.find((lift) => lift.liftId === nearestLiftId);
+        if (!liftFound) {
+            scheduleOperation.push(floorToMove);
+            return;
+        }
+        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId);
+
+        return;
+    }
+
+    if (lift.movingStatus === true) {
+        console.log('Already moving', lift);
+
+        //FIXED: AFTER COMPLETION OF MOVEMENT, THEN OTHER STARTED MOVING
+        // if already moving to that floor
+        const alreadyMovingLift = lifts.find((lift) => lift.whereMoving === floorToMove);
+        if (alreadyMovingLift) {
+            return;
+        }
+
+        // find nearest lift that is not moving & door close
+        let distance = floors.length;
+        let nearestLiftId = null;
+        const totalNoOfLifts = lifts.length;
+
+        for (let liftIdx = 0; liftIdx < totalNoOfLifts; liftIdx++) {
+            const eachLift = lifts[liftIdx];
+
+            if (eachLift.stateStatus === false &&
+                eachLift.movingStatus === false &&
+                eachLift.whereMoving === null &&
+                Math.abs(eachLift.floorNumberAt - floorToMove) < distance
+            ) {
+                nearestLiftId = eachLift.liftId;
+                distance = Math.abs(eachLift.floorNumberAt - floorToMove);
+            }
+        }
+
+        const liftFound = lifts.find((lift) => lift.liftId === nearestLiftId);
+        if (!liftFound) {
+            scheduleOperation.push(floorToMove);
+            return;
+        }
+        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId);
+        return;
+    }
 
     // move lift now
     liftMovement(lift.floorNumberAt, floorToMove, id);
@@ -248,6 +299,9 @@ function liftMovement(source, destination, currentLiftId) {
     const liftRightDoor = document.querySelector(`#right_lift_door_${currentLiftId}`);
     const distance = -1 * destination * 160;
     const time = Math.abs(source - destination) * 2;
+
+    currentLift.whereMoving = destination;
+    currentLift.movingStatus = true;
 
     setTimeout(() => {
         liftLeftDoor.style.transform = 'translateX(-100%)';
@@ -274,8 +328,6 @@ function liftMovement(source, destination, currentLiftId) {
         console.log('lift moving complete & door close complete: ', currentLift);
     }, time * 1000 + 5000);
 
-    currentLift.whereMoving = destination;
-    currentLift.movingStatus = true;
     console.log('lift moving start: ', currentLift);
     currentLift.element.style.transform = `translateY(${distance}px)`;
     currentLift.element.style.transition = `transform ${time}s`;

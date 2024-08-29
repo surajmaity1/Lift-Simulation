@@ -7,6 +7,7 @@ const constructFloors = document.getElementById('floors');
 const floors = [];
 const lifts = [];
 const scheduleOperation = [];
+let buttonTypeClicked = '';
 
 playButton.addEventListener('click', function (event) {
     if (noOfFloors.value < 1 || noOfLifts.value < 1) {
@@ -97,7 +98,8 @@ function createLifts(totalNoOfLifts) {
             movingStatus: false,
             whereMoving: null,
             floorNumberAt: 0,
-            element: eachLift
+            element: eachLift,
+            buttonTypeClicked: null
         };
 
         lifts.push(eachLiftState);
@@ -134,6 +136,7 @@ function openDoorsOfCurrentLift(currentLiftId) {
 
     setTimeout(() => {
         lift.stateStatus = false;
+        // lift.buttonTypeClicked = null;
         console.log('openDoorsOfCurrentLift door close complete', lift);
     }, 7000);
     console.log('openDoorsOfCurrentLift just started', lift);
@@ -141,8 +144,11 @@ function openDoorsOfCurrentLift(currentLiftId) {
 
 function allLiftsButtonsController(event) {
     const button = event.target.id;
-    const floorNumberAt = button.split('_')[2] - 1;
-    console.log(floorNumberAt);
+    const buttonDetails = button.split('_');
+    const buttonType = buttonDetails[0];
+    buttonTypeClicked = buttonType;
+    const floorNumberAt = buttonDetails[2] - 1;
+
     // check any lift present at same floor from where button is clicked
     const currentLiftAt = lifts.find(
         (lift) => {
@@ -153,14 +159,40 @@ function allLiftsButtonsController(event) {
     // if lift present at current floor, simple open gate and close gate
     // don't move other lift
     if (currentLiftAt) {
-        openDoorsOfCurrentLift(currentLiftAt.liftId);
+        // check up button or down button clicked
+
+        // same lift already present with same button call
+        if (currentLiftAt.buttonTypeClicked === null || currentLiftAt.buttonTypeClicked === buttonType) {
+            currentLiftAt.buttonTypeClicked = buttonType;
+            openDoorsOfCurrentLift(currentLiftAt.liftId);
+            return;
+        }
+
+        // check other lift present or not
+        const isThereAnyMoreLift = lifts.find(
+            (lift) => {
+                return lift.liftId !== currentLiftAt.liftId && 
+                lift.floorNumberAt === floorNumberAt
+            }
+        );
+
+        // if there is no lifts or there is lift but diff button is called
+        if (!isThereAnyMoreLift || isThereAnyMoreLift.buttonTypeClicked !== buttonType) {
+            console.log('reached 1');
+            scheduleOperation.push([floorNumberAt, buttonType]);
+            return;
+        }
+
+        // other lift present at the same floor, then open the gate
+        isThereAnyMoreLift.buttonTypeClicked = buttonType;
+        openDoorsOfCurrentLift(isThereAnyMoreLift.liftId);
         return;
     }
 
     // check any lift moving at that floor from where button is clicked
     const anyMovingLiftToFloor = lifts.find(
         (lift) => {
-            lift.whereMoving === floorNumberAt && lift.movingStatus === true
+            lift.whereMoving === floorNumberAt && lift.movingStatus === true && lift.buttonTypeClicked === buttonType
         }
     );
 
@@ -173,7 +205,8 @@ function allLiftsButtonsController(event) {
     console.log('schedule');
 
     // put operation in array
-    scheduleOperation.push(floorNumberAt);
+    scheduleOperation.push([floorNumberAt, buttonTypeClicked]);
+    console.log('scheduleOperation', scheduleOperation);
 }
 
 function getNearestLiftId(currentFloor) {
@@ -199,7 +232,17 @@ function liftOperationScheduler() {
     if (scheduleOperation.length === 0) {
         return;
     }
-    const floorToMove = scheduleOperation.shift();
+
+    console.log('-----');
+    for (let index = 0; index < scheduleOperation.length; index++) {
+        const op = scheduleOperation[index];
+        console.log(op);
+    }
+
+
+    const operation = scheduleOperation.shift();
+    const floorToMove = operation[0];
+    const buttonType = operation[1];
     // get lift id
     const id = getNearestLiftId(floorToMove);
 
@@ -209,7 +252,7 @@ function liftOperationScheduler() {
 
     // if there is any lift 
     if (!lift) {
-        scheduleOperation.unshift(floorToMove);
+        scheduleOperation.unshift(operation);
         return;
     }
 
@@ -235,26 +278,26 @@ function liftOperationScheduler() {
         }
 
         if (!nearestLiftId) {
-            scheduleOperation.push(floorToMove);
+            scheduleOperation.push([floorToMove, buttonTypeClicked]);
             return;
         }
 
-        const liftFound = lifts.find((lift) => lift.liftId === nearestLiftId);
+        const liftFound = lifts.find((lift) => lift.liftId === nearestLiftId && lift.buttonTypeClicked === buttonType);
         if (!liftFound) {
-            scheduleOperation.push(floorToMove);
+            scheduleOperation.push([floorToMove, buttonTypeClicked]);
             return;
         }
-        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId);
+        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId, buttonType);
 
         return;
     }
 
     if (lift.movingStatus === true) {
-        console.log('Already moving', lift);
+        // console.log('Already moving', lift);
 
         //FIXED: AFTER COMPLETION OF MOVEMENT, THEN OTHER STARTED MOVING
         // if already moving to that floor
-        const alreadyMovingLift = lifts.find((lift) => lift.whereMoving === floorToMove);
+        const alreadyMovingLift = lifts.find((lift) => lift.whereMoving === floorToMove && lift.buttonTypeClicked === buttonType);
         if (alreadyMovingLift) {
             return;
         }
@@ -279,18 +322,56 @@ function liftOperationScheduler() {
 
         const liftFound = lifts.find((lift) => lift.liftId === nearestLiftId);
         if (!liftFound) {
-            scheduleOperation.push(floorToMove);
+            scheduleOperation.push([floorToMove, buttonTypeClicked]);
             return;
         }
-        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId);
+        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId, buttonType);
+        return;
+    }
+
+    // one lift already present at same floor but different button is called
+    // another lift should come to that floor
+    if (lift.floorNumberAt === floorToMove && lift.buttonTypeClicked !== buttonType) {
+        // if already moving to that floor
+        const alreadyMovingLift = lifts.find((lift) => lift.whereMoving === floorToMove && lift.buttonTypeClicked === buttonType);
+        if (alreadyMovingLift) {
+            return;
+        }
+
+        // find nearest lift that is not moving & door close
+        // also nearest lift should not same as lift preset at same floor
+        let distance = floors.length;
+        let nearestLiftId = null;
+        const totalNoOfLifts = lifts.length;
+
+        for (let liftIdx = 0; liftIdx < totalNoOfLifts; liftIdx++) {
+            const eachLift = lifts[liftIdx];
+
+            if (eachLift.liftId !== lift.liftId &&
+                eachLift.stateStatus === false &&
+                eachLift.movingStatus === false &&
+                eachLift.whereMoving === null &&
+                Math.abs(eachLift.floorNumberAt - floorToMove) < distance
+            ) {
+                nearestLiftId = eachLift.liftId;
+                distance = Math.abs(eachLift.floorNumberAt - floorToMove);
+            }
+        }
+
+        const liftFound = lifts.find((lift) => lift.liftId === nearestLiftId);
+        if (!liftFound) {
+            scheduleOperation.push([floorToMove, buttonTypeClicked]);
+            return;
+        }
+        liftMovement(liftFound.floorNumberAt, floorToMove, nearestLiftId, buttonType);
         return;
     }
 
     // move lift now
-    liftMovement(lift.floorNumberAt, floorToMove, id);
+    liftMovement(lift.floorNumberAt, floorToMove, id, buttonType);
 }
 
-function liftMovement(source, destination, currentLiftId) {
+function liftMovement(source, destination, currentLiftId, buttonType) {
     const currentLift = lifts.find(
         (lift) => lift.liftId === currentLiftId
     );
@@ -302,6 +383,7 @@ function liftMovement(source, destination, currentLiftId) {
 
     currentLift.whereMoving = destination;
     currentLift.movingStatus = true;
+    currentLift.buttonTypeClicked = buttonType;
 
     setTimeout(() => {
         liftLeftDoor.style.transform = 'translateX(-100%)';
@@ -325,6 +407,7 @@ function liftMovement(source, destination, currentLiftId) {
 
     setTimeout(() => {
         currentLift.stateStatus = false;
+        // currentLift.buttonTypeClicked = null;
         console.log('lift moving complete & door close complete: ', currentLift);
     }, time * 1000 + 5000);
 

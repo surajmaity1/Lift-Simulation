@@ -7,6 +7,7 @@ const constructFloors = document.getElementById('floors');
 const floors = [];
 const lifts = [];
 const scheduleOperation = [];
+const queue = [];
 let buttonTypeClicked = '';
 
 playButton.addEventListener('click', function (event) {
@@ -234,15 +235,26 @@ function liftOperationScheduler() {
     }
 
     console.log('-----');
-    for (let index = 0; index < scheduleOperation.length; index++) {
-        const op = scheduleOperation[index];
-        console.log(op);
-    }
-
 
     const operation = scheduleOperation.shift();
     const floorToMove = operation[0];
     const buttonType = operation[1];
+
+    // TODO: suppose lift is moving to 4th floor, but before reaching 4rd floor
+    // 3rd floor's same type button clicked, so it should stop 3rd and then move to 4th floor.
+
+    // if (queue.length > 0) {
+    //     const queueOperation = queue.find(
+    //         (data) => data.direction === buttonType && data.destination >= floorToMove
+    //     );
+    //     if (queueOperation) {
+    //         console.log('alredy uping', queueOperation);
+    //         const lift = lifts.find((eachLift) => eachLift.liftId === queueOperation.liftId);
+    //         liftMovement(lift.floorNumberAt, queueOperation.destination, queueOperation.lift, buttonType);
+    //         return;
+    //     }
+    // }
+
     // get lift id
     const id = getNearestLiftId(floorToMove);
 
@@ -380,10 +392,48 @@ function liftMovement(source, destination, currentLiftId, buttonType) {
     const liftRightDoor = document.querySelector(`#right_lift_door_${currentLiftId}`);
     const distance = -1 * destination * 160;
     const time = Math.abs(source - destination) * 2;
+    const liftMovementStartingTime = new Date().getTime()/1000;
 
     currentLift.whereMoving = destination;
     currentLift.movingStatus = true;
     currentLift.buttonTypeClicked = buttonType;
+
+    // queue implementation
+    const queueStatus = {
+        liftId: currentLiftId,
+        destination: destination,
+        direction: buttonType
+    }
+
+    // queue.push([currentLiftId, destination, buttonType]);
+    queue.push(queueStatus);
+    console.log('queue');
+    for (let index = 0; index < queue.length; index++) {
+        const element = queue[index];
+        console.log(element);
+    }
+
+    // dynamically change lift's floorNumberAt value when it already crossed current floor
+    // const interval = setInterval(() => {
+    //     if (buttonType === 'up') {
+    //         if (source !== 0){
+    //             currentLift.floorNumberAt = currentLift.floorNumberAt + 1;
+    //         }
+    //         else {
+    //             currentLift.floorNumberAt = currentLift.floorNumberAt - 1;
+    //         }
+    //     }
+    //     else if (buttonType === 'down') {
+    //         if (destination !== floors.length - 1) {
+    //             currentLift.floorNumberAt = currentLift.floorNumberAt - 1;
+    //         }
+    //         else {
+    //             currentLift.floorNumberAt = currentLift.floorNumberAt + 1;
+    //         }
+    //     }
+    //     console.log('floor at', currentLift.floorNumberAt);
+    //     console.log(currentLift);
+    // }, 2000);
 
     setTimeout(() => {
         liftLeftDoor.style.transform = 'translateX(-100%)';
@@ -395,6 +445,11 @@ function liftMovement(source, destination, currentLiftId, buttonType) {
         currentLift.movingStatus = false;
         currentLift.whereMoving = null;
         console.log('lift moving complete & door open start: ', currentLift);
+        // clearInterval(interval);
+        // const liftMovementEndingTime = new Date().getTime()/1000;
+        // console.log('lift id:', currentLift.liftId, '& time taken', Math.trunc(
+        //     Math.abs(liftMovementEndingTime - liftMovementStartingTime)
+        // ), 'second');
     }, time * 1000);
 
 
